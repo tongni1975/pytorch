@@ -265,6 +265,10 @@ void Reducer::autograd_hook(VariableIndex index) {
   // function and their indexes stored in the `unused_parameters_` vector.
   if (!has_marked_unused_parameters_ && !unused_parameters_.empty()) {
     has_marked_unused_parameters_ = true;
+
+    // Allreduce locally used param maps to get the global consensus
+    local_used_work_ = process_group_->allreduce(local_used_maps_);
+
     for (const auto& unused_index : unused_parameters_) {
       mark_variable_ready(unused_index);
     }
@@ -589,9 +593,6 @@ void Reducer::prepare_for_backward(
     unused_parameters_.push_back(var_idx);
     local_used_maps_[var_idx.replica_index][var_idx.variable_index] = 0;
   }
-
-  // allreduce locally used param maps to get the global consensus
-  process_group_->allreduce(local_used_maps_);
 }
 
 // A bucket with one or more dense tensors needs to be unflattened.
@@ -650,6 +651,7 @@ void Reducer::finalize_backward() {
   AT_ASSERT(next_bucket_ == buckets_.size());
 
   // Wait for asynchronous reduction to complete and unflatten contents.
+  local_used_work_->wait();
   for (auto& bucket : buckets_) {
     AT_ASSERT(bucket.work);
     bucket.work->wait();
