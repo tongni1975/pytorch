@@ -3196,8 +3196,7 @@ class TestNN(NNTestCase):
         self.assertRaises(AssertionError, lambda: F.pad(inputs, (1, 1)))
         self.assertRaises(AssertionError, lambda: F.pad(inputs, (1,)))
 
-    @unittest.skipIf((not TEST_NUMPY) or (not TEST_SCIPY) or (scipy.__version__ < '1.0.0'),
-                     "Scipy v1.0 and/or numpy not found")
+    @unittest.skipIf(not TEST_NUMPY, "numpy not found")
     def test_multihead_attention(self):
         def _scaled_dot_attn_ref(Q, K, V, dims, unseen_mask=None, key_padding_mask=None):
             """ Numpy-based reference implementation of scaled dot attention
@@ -3209,7 +3208,7 @@ class TestNN(NNTestCase):
                 / np.sqrt(dims[3], dtype=np.float32),  # divide by sqrt(d_head)
             )
             b1, b2, s1, s2 = QKT.shape
-            if unseen_mask is not None or src_lengths is not None:
+            if unseen_mask is not None or key_padding_mask is not None:
                 # assert s1 == s2
                 for i in range(b1):
                     for j in range(b2):
@@ -3337,7 +3336,6 @@ class TestNN(NNTestCase):
                     bias_k = None
                     bias_v = None
 
-                _batch_size = decoder_state_tensor.shape[0]
                 _Q = decoder_state_tensor.unsqueeze(1).transpose(0, 1)
                 _V = source_hid_tensor
                 _K = source_hid_tensor
@@ -3397,7 +3395,7 @@ class TestNN(NNTestCase):
                 else:
                     K_split = _split_heads_ref(K_fc, dims, nheads, d_head)
 
-                if saved_k is not None:
+                if saved_v is not None:
                     V_split = np.reshape(saved_v, [dims[0], nheads, dims[1], d_head])
                 else:
                     V_split = _split_heads_ref(V_fc, dims, nheads, d_head)
