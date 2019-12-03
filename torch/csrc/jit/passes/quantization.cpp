@@ -1,4 +1,5 @@
 #include <torch/csrc/jit/passes/quantization.h>
+#include <torch/csrc/jit/passes/constant_pooling.h>
 #include <torch/csrc/jit/passes/constant_propagation.h>
 #include <torch/csrc/jit/passes/fuse_linear.h>
 #include <torch/csrc/jit/passes/quantization_patterns.h>
@@ -364,9 +365,13 @@ void InsertObserversHelper::insertObservers(
 
   script::Method method = module.get_method(method_name);
   auto graph = method.graph();
+  // To cleanup traced graph
+  ConstantPooling(graph);
   ConstantPropagation(graph);
   // must do constant propagation first before replacement
   replaceConvolutionWithConv2d(graph);
+  // fuse decomposed linear into aten::linear
+  FuseLinear(graph);
   addIntermediateValuesToSkipObserver(module, method_name);
   // For storing all values that need to be instrumented with an observer call.
   std::vector<Value*> values_to_observe;
