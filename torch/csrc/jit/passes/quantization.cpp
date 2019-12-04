@@ -888,15 +888,14 @@ static bool tryExtractingConvBNParameters(
     ConvBNParameters& r) {
   if (!hastensor(conv, "weight") || !hastensor(bn, "weight") ||
       !hastensor(bn, "bias") || !hastensor(bn, "running_mean") ||
-      !hastensor(bn, "running_var")) {
+      !hastensor(bn, "running_var") ||
+      !bn.hasattr("eps")) {
     return false;
   }
 
   r.bn_rm = bn.attr("running_mean").toTensor();
   r.bn_rv = bn.attr("running_var").toTensor();
-  r.bn_eps = 1e-5; // TODO: allow access to the actual value. NOLINT
-                   // Now we cannot do it because we inline all fields that are
-                   // in __constants__ and lose all tracks of them.
+  r.bn_eps = bn.attr("eps").toDouble();
   r.bn_w = bn.attr("weight").toTensor();
   r.bn_b = bn.attr("bias").toTensor();
 
