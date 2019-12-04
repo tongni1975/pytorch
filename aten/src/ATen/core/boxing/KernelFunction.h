@@ -5,6 +5,7 @@
 #include <ATen/core/boxing/kernel_functor.h>
 #include <ATen/core/boxing/kernel_function.h>
 #include <ATen/core/boxing/kernel_lambda.h>
+#include <c10/util/TypeIndex.h>
 
 namespace c10 {
 
@@ -22,8 +23,6 @@ public:
   using InternalBoxedKernelFunction = void(OperatorKernel*, const OperatorHandle&, Stack*);
   // This is the public API for how boxed kernels are defined
   using BoxedKernelFunction = void(const OperatorHandle&, Stack*);
-
-  KernelFunction();
 
   bool isValid() const;
 
@@ -223,6 +222,12 @@ private:
 
   InternalBoxedKernelFunction* boxed_kernel_func_;
   void* unboxed_kernel_func_;
+
+  // signature_hash_ is set to the hash of the function signature if the
+  // KernelFunction was created in a way that allowed us to know the function
+  // signature. If this is set, it will be used in unboxed function calls
+  // to verify their arguments against the known function signature.
+  c10::optional<c10::util::type_index> signature_hash_;
 };
 
 }
